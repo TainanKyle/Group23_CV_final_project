@@ -59,7 +59,7 @@ class TextureMesh(nn.Module):
 
     def _init_mesh(self):
         cache_dir = self.config.log_dir
-
+        print(1)
         self.mesh_dict = init_multiple_meshes_as_scene(
             json.load(open(self.config.scene_config_path)), 
             str(cache_dir), 
@@ -67,9 +67,9 @@ class TextureMesh(nn.Module):
             subdivide_factor=self.config.subdivide_factor,
             return_dict=True
         )
-
+        print(2)
         self.mesh, self.texture = self._init_texture(self.mesh_dict)
-
+        print(3)
         if self.config.use_background:
             self.background_mesh_dict = init_background(
                 self.config.background,
@@ -78,7 +78,7 @@ class TextureMesh(nn.Module):
                 self.device,
                 return_dict=True
             )
-
+            print(4)
             self.background_mesh, self.background_texture = self._init_texture(self.background_mesh_dict)
 
     def _init_texture(self, mesh_dict):

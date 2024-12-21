@@ -15,3 +15,12 @@ models/3D-FRONT-ToolBox/
 data/3D-FRONT_preprocessed/
 
 _cache*
+
+data/self/
+data/scenes/original_dataset
+*.obj
+*.pyc
+*.pyo
+*.zip
+*.mtl
+*.obj

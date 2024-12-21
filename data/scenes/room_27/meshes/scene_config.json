@@ -1,0 +1,8 @@
+{
+    "0": {
+        "name": "room",
+        "type": "stuff",
+        "path": "data/scenes/room_27/meshes/scene.obj",
+        "prompt": "a room"
+    }
+}

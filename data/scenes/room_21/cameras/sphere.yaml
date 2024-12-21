@@ -1,0 +1,22 @@
+# sphere camera space
+dist:
+  min: 3.5
+  max: 3.5
+  num_linspace: 1
+
+elev:
+  min: -45
+  max: 45
+  num_linspace: 10
+
+azim:
+  min: -180
+  max: 180
+  num_linspace: 100
+
+fov:
+  min: 30
+  max: 60
+  num_linspace: 5
+
+at: [[0.0, 1.5, 0.0]]
