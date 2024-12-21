@@ -71,24 +71,24 @@ class TexturePipeline(nn.Module):
             self.config.log_name = self.log_name
             self.config.log_stamp = self.log_stamp
             self.config.log_dir = self.log_dir
-        print(1)
+
         # 3D assets
         self._init_mesh()
-        print(2)
+
         # studio
         self._init_studio()
-        print(3)
+
         # instances
         self._init_anchors()
-        print(4)
+
         if not inference_mode:
             # diffusion
             self._init_guidance()
-            print(5)
+
             # optimization
             self._configure_optimizers()
             self._init_logger()
-            print(6)
+
         if self.config.enable_clip_benchmark:
             import open_clip
             self.clip, _, self.clip_preprocess = open_clip.create_model_and_transforms('ViT-B-32', pretrained='laion2b_s34b_b79k')
