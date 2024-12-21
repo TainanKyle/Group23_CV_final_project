@@ -18,6 +18,8 @@ _cache*
 
 data/self/
 data/scenes/original_dataset
+samples/
+docs/samples/
 *.obj
 *.pyc
 *.pyo
