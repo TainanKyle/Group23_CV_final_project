@@ -179,18 +179,15 @@ class Guidance(nn.Module):
         text_input = self.tokenizer(
             [self.prompt], 
             padding="max_length", 
-            # max_length=self.tokenizer.model_max_length, 
-            max_length=77-40,
+            max_length=self.tokenizer.model_max_length, 
             truncation=True, 
             return_tensors="pt"
         ).input_ids.to(self.device)
 
         with torch.no_grad():
-            text_embeddings = self.text_encoder(text_input)[0].repeat(batch_size, 1, 1) # (B, 37, 768)
-            # text_embeddings = self.text_encoder(text_input)[0].repeat(batch_size // 2, 1, 1)
+            text_embeddings = self.text_encoder(text_input)[0].repeat(batch_size, 1, 1) # (B, 77, 768)
 
-        # max_length = text_input.shape[-1]
-        max_length = text_input.shape[-1] + 40
+        max_length = text_input.shape[-1]
         uncond_input = self.tokenizer(
             [self.n_prompt], 
             padding="max_length", 
@@ -200,10 +197,8 @@ class Guidance(nn.Module):
 
         with torch.no_grad():
             uncond_embeddings = self.text_encoder(uncond_input)[0].repeat(batch_size, 1, 1) # (B, 77, 768)
-            # uncond_embeddings = self.text_encoder(uncond_input)[0].repeat(batch_size // 2, 1, 1)
         print("cond embeddings shape:", text_embeddings.shape)
         print("=> uncond embeddings shape:", uncond_embeddings.shape)
-        # self.text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
         # print("=> text embeddings shape:", self.text_embeddings.shape)
 
         # use CLIP to encode image
@@ -219,14 +214,13 @@ class Guidance(nn.Module):
             image_features = model.get_image_features(**inputs) # (1, 768)
 
         # combine text and image features
-        # image_features = image_features.repeat(batch_size, self.text_embeddings.shape[1], 1)
-        image_features = image_features.repeat(batch_size, 40, 1)   # (B, 40, 768)
+        # image_features = image_features.repeat(batch_size, self.text_embeddings.shape[1], 1) # (B, 77, 768)
+        image_features = image_features.repeat(batch_size, text_embeddings.shape[1], 1) # (B, 77, 768)
         print("=> image features shape:", image_features.shape)
 
-        self.text_embeddings = torch.cat([image_features, text_embeddings], dim=1)
+        self.text_embeddings = 0.5 * text_embeddings + 0.5 * image_features
         print("=> text embeddings shape:", self.text_embeddings.shape)
         self.text_embeddings = torch.cat([self.text_embeddings, uncond_embeddings], dim=0)
-        # self.text_embeddings = torch.cat([self.text_embeddings, image_features])
         print("=> text embeddings shape:", self.text_embeddings.shape)
 
 

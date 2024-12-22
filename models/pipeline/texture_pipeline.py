@@ -483,5 +483,14 @@ class TexturePipeline(nn.Module):
                     "train/avg_loss_lora": np.mean(self.avg_loss_phi),
                     "train/clip_score": np.mean(clip_scores)
                 })
+    def multihead(self):
+        image_proj = nn.Linear(768, 768)
+        mapped_image = image_proj(self.guidance.image_embedding)  # (1, 768)
+        expanded_image = mapped_image.unsqueeze(1).repeat(1, 77, 1)  # (1, 77, 768)
+
+        concat_embedding = torch.cat([self.guidance.text_embedding, expanded_image], dim=-1)  # (1, 77, 1536)
+        fusion_proj = nn.Linear(1536, 768)
+        self.guidance.text_embeddings = fusion_proj(concat_embedding)  # (1, 77, 768)
+
         
 
