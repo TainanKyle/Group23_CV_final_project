@@ -14,6 +14,8 @@ import torchvision
 from PIL import Image
 from diffusers import DDIMScheduler, ControlNetModel
 
+from transformers import CLIPProcessor, CLIPModel
+
 # customized
 import sys
 sys.path.append("./models")
@@ -177,15 +179,18 @@ class Guidance(nn.Module):
         text_input = self.tokenizer(
             [self.prompt], 
             padding="max_length", 
-            max_length=self.tokenizer.model_max_length, 
+            # max_length=self.tokenizer.model_max_length, 
+            max_length=77-40,
             truncation=True, 
             return_tensors="pt"
         ).input_ids.to(self.device)
 
         with torch.no_grad():
-            text_embeddings = self.text_encoder(text_input)[0].repeat(batch_size, 1, 1)
+            text_embeddings = self.text_encoder(text_input)[0].repeat(batch_size, 1, 1) # (B, 37, 768)
+            # text_embeddings = self.text_encoder(text_input)[0].repeat(batch_size // 2, 1, 1)
 
-        max_length = text_input.shape[-1]
+        # max_length = text_input.shape[-1]
+        max_length = text_input.shape[-1] + 40
         uncond_input = self.tokenizer(
             [self.n_prompt], 
             padding="max_length", 
@@ -194,9 +199,36 @@ class Guidance(nn.Module):
         ).input_ids.to(self.device)
 
         with torch.no_grad():
-            uncond_embeddings = self.text_encoder(uncond_input)[0].repeat(batch_size, 1, 1)
+            uncond_embeddings = self.text_encoder(uncond_input)[0].repeat(batch_size, 1, 1) # (B, 77, 768)
+            # uncond_embeddings = self.text_encoder(uncond_input)[0].repeat(batch_size // 2, 1, 1)
+        print("cond embeddings shape:", text_embeddings.shape)
+        print("=> uncond embeddings shape:", uncond_embeddings.shape)
+        # self.text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
+        # print("=> text embeddings shape:", self.text_embeddings.shape)
 
-        self.text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
+        # use CLIP to encode image
+        model_name = "openai/clip-vit-large-patch14"
+        model = CLIPModel.from_pretrained(model_name)
+        processor = CLIPProcessor.from_pretrained(model_name)
+        model = model.to(self.device)
+        
+        image = Image.open(self.config.img_path).convert("RGB")
+        inputs = processor(images=image, return_tensors="pt").to(self.device)
+
+        with torch.no_grad():
+            image_features = model.get_image_features(**inputs) # (1, 768)
+
+        # combine text and image features
+        # image_features = image_features.repeat(batch_size, self.text_embeddings.shape[1], 1)
+        image_features = image_features.repeat(batch_size, 40, 1)   # (B, 40, 768)
+        print("=> image features shape:", image_features.shape)
+
+        self.text_embeddings = torch.cat([image_features, text_embeddings], dim=1)
+        print("=> text embeddings shape:", self.text_embeddings.shape)
+        self.text_embeddings = torch.cat([self.text_embeddings, uncond_embeddings], dim=0)
+        # self.text_embeddings = torch.cat([self.text_embeddings, image_features])
+        print("=> text embeddings shape:", self.text_embeddings.shape)
+
 
     def prepare_depth_map(self, depth_map):
         assert len(depth_map.shape) == 4

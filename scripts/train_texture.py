@@ -34,6 +34,7 @@ def init_args():
     parser.add_argument("--log_dir", type=str, default="")
     parser.add_argument("--prompt", type=str, default="")
     parser.add_argument("--scene_id", type=str, default="", help="<house_id>/<room_id>")
+    parser.add_argument("--img_path", type=str, default="")
 
     args = parser.parse_args()
 
@@ -55,6 +56,11 @@ def init_config(args):
         config.log_dir = args.log_dir
         config.prompt = args.prompt
         config.scene_id = args.scene_id
+
+    if len(args.img_path) != 0:
+        print("   img_path:", args.img_path)
+
+        config.img_path = args.img_path
 
     return config
 
