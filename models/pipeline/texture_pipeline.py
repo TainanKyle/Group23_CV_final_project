@@ -36,7 +36,7 @@ from pytorch3d.ops import interpolate_face_attributes
 # customized
 import sys
 sys.path.append("./lib")
-from models.modules import TextureMesh, Studio, Guidance
+from models.modules import TextureMesh, Studio, Guidance, MultiModalFusion
 
 class TexturePipeline(nn.Module):
     def __init__(self, 
@@ -81,6 +81,10 @@ class TexturePipeline(nn.Module):
         # instances
         self._init_anchors()
 
+        # multimodalfusion
+        if self.config.learn_multimodalfusion:
+            self._init_multimodalfusion()
+
         if not inference_mode:
             # diffusion
             self._init_guidance()
@@ -102,6 +106,9 @@ class TexturePipeline(nn.Module):
 
     def _init_guidance(self):
         self.guidance = Guidance(self.config, self.device)
+
+    def _init_multimodalfusion(self):
+        self.multimodalfusion = MultiModalFusion().to(self.device)
 
     def _init_anchors(self):
         if self.config.enable_anchor_embedding:
@@ -152,6 +159,9 @@ class TexturePipeline(nn.Module):
     def _get_guidance_parameters(self):
         return [p for p in self.guidance.unet_phi_layers.parameters() if p.requires_grad]
 
+    def _get_multimodalfusion_parameters(self):
+        return [p for p in self.multimodalfusion.parameters() if p.requires_grad]
+
     def _configure_optimizers(self):
         texture_params = self._get_texture_parameters()
 
@@ -167,6 +177,13 @@ class TexturePipeline(nn.Module):
                 sum(p.numel() for p in guidance_params if p.requires_grad)))
 
             self.phi_optimizer = AdamW(guidance_params, lr=self.config.phi_lr)
+
+            multimodalfusion_params = self._get_multimodalfusion_parameters()
+
+            print("=> Number of trainable parameters of multimodalfusion model: {}".format(
+                sum(p.numel() for p in multimodalfusion_params if p.requires_grad)))
+
+            self.multimodalfusion_optimizer = AdamW(multimodalfusion_params, lr=self.config.latent_lr)
 
     def _downsample(self, inputs, in_size, out_size, mode="direct", type_="interpolate"):
         if mode == "iterative":
@@ -334,7 +351,8 @@ class TexturePipeline(nn.Module):
         self.guidance.init_text_embeddings(self.config.batch_size)
 
         for step, chosen_t in enumerate(pbar):
-
+            self.guidance.text_embeddings = self.multimodalfusion.forward(
+                self.guidance.image_embedding, self.guidance.text_embedding, self.guidance.uncond_embedding)
             Rs, Ts, fovs, ids = self.studio.sample_cameras(step, self.config.batch_size, self.config.use_random_cameras)
             cameras = self.studio.set_cameras(Rs, Ts, fovs, self.config.render_size)
             latents, _, _, rel_depth_normalized = self.forward(cameras, is_direct=("hashgrid" not in self.config.texture_type))
@@ -360,6 +378,7 @@ class TexturePipeline(nn.Module):
 
                 # VSD
                 self.texture_optimizer.zero_grad()
+                self.multimodalfusion_optimizer.zero_grad()
 
                 vsd_loss_pixel, vsd_loss = self.guidance.compute_vsd_loss(
                     latents, noisy_latents, noise, t.to(latents.dtype), 
@@ -369,6 +388,7 @@ class TexturePipeline(nn.Module):
 
                 vsd_loss.backward()
                 self.texture_optimizer.step()
+                self.multimodalfusion_optimizer.step()
 
 
                 # phi
@@ -425,6 +445,9 @@ class TexturePipeline(nn.Module):
                 if self.config.enable_anchor_embedding: 
                     checkpoint["anchor_func"] = self.studio.anchor_func.state_dict()
 
+                if self.config.learn_multimodalfusion:
+                    checkpoint["multimodalfusion"] = self.multimodalfusion.state_dict()
+                    
                 torch.save(
                     checkpoint,
                     os.path.join(self.log_dir, "checkpoint_{}.pth".format(step))
@@ -483,14 +506,3 @@ class TexturePipeline(nn.Module):
                     "train/avg_loss_lora": np.mean(self.avg_loss_phi),
                     "train/clip_score": np.mean(clip_scores)
                 })
-    def multihead(self):
-        image_proj = nn.Linear(768, 768)
-        mapped_image = image_proj(self.guidance.image_embedding)  # (1, 768)
-        expanded_image = mapped_image.unsqueeze(1).repeat(1, 77, 1)  # (1, 77, 768)
-
-        concat_embedding = torch.cat([self.guidance.text_embedding, expanded_image], dim=-1)  # (1, 77, 1536)
-        fusion_proj = nn.Linear(1536, 768)
-        self.guidance.text_embeddings = fusion_proj(concat_embedding)  # (1, 77, 768)
-
-        
-

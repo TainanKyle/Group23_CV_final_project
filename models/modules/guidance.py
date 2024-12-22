@@ -213,15 +213,21 @@ class Guidance(nn.Module):
         with torch.no_grad():
             image_features = model.get_image_features(**inputs) # (1, 768)
 
-        # combine text and image features
-        # image_features = image_features.repeat(batch_size, self.text_embeddings.shape[1], 1) # (B, 77, 768)
-        image_features = image_features.repeat(batch_size, text_embeddings.shape[1], 1) # (B, 77, 768)
-        print("=> image features shape:", image_features.shape)
+        if not self.config.learn_multimodalfusion:
+            # combine text and image features
+            # image_features = image_features.repeat(batch_size, self.text_embeddings.shape[1], 1) # (B, 77, 768)
+            image_features = image_features.repeat(batch_size, text_embeddings.shape[1], 1) # (B, 77, 768)
+            print("=> image features shape:", image_features.shape)
 
-        self.text_embeddings = 0.5 * text_embeddings + 0.5 * image_features
-        print("=> text embeddings shape:", self.text_embeddings.shape)
-        self.text_embeddings = torch.cat([self.text_embeddings, uncond_embeddings], dim=0)
-        print("=> text embeddings shape:", self.text_embeddings.shape)
+            self.text_embeddings = 0.5 * text_embeddings + 0.5 * image_features
+            print("=> text embeddings shape:", self.text_embeddings.shape)
+            self.text_embeddings = torch.cat([self.text_embeddings, uncond_embeddings], dim=0)
+            print("=> text embeddings shape:", self.text_embeddings.shape)
+        else:
+            # save embeddings for linear projection
+            self.text_embedding = text_embeddings
+            self.uncond_embedding = uncond_embeddings
+            self.image_embedding = image_features
 
 
     def prepare_depth_map(self, depth_map):
