@@ -15,13 +15,14 @@ print(f"Device: {device}")
 epochs = 50
 learning_rate = 1e-4
 batch_size = 32
-is_Train = True
+is_Train = False
 is_Test = True
 
 image_dir = "/home/gpl_homee/indoor_scene/SceneTex/image_to_text/img"
 text_dir = "/home/gpl_homee/indoor_scene/SceneTex/image_to_text/style"
 test_image_dir = "/home/gpl_homee/indoor_scene/SceneTex/image_to_text/test/img"
 test_text_dir = "/home/gpl_homee/indoor_scene/SceneTex/image_to_text/test/style"
+checkpoint_path = "/home/gpl_homee/indoor_scene/SceneTex/image_to_text/checkpoint_epoch_{epochs}.pth"
 
 class ImageTextDataset(Dataset):
     def __init__(self, image_dir, text_dir):
@@ -117,7 +118,8 @@ if is_Train:
 
 # test
 if is_Test:
-    model.load_state_dict(torch.load("checkpoint.pth"))
+    print("=> testing...")
+    model.load_state_dict(torch.load(checkpoint_path))
     model.eval()
     with torch.no_grad():
         test_dataset = ImageTextDataset(test_image_dir, test_text_dir)
@@ -125,7 +127,8 @@ if is_Test:
         total_similarity = 0.0
         total_loss = 0.0
         total_ecl_distance = 0.0
-        for images, texts in test_dataloader:
+        for image_paths, texts in test_dataloader:
+            images = [Image.open(image_path).convert("RGB") for image_path in image_paths]
             inputs = clip_processor(images=images, return_tensors="pt").to(device)
             image_embeddings = clip_model.get_image_features(**inputs)
             outputs = model(image_embeddings)
