@@ -141,4 +141,5 @@ scene_config_path: ${scene_dir}/${scene_id}/meshes/scene_config.json
 sphere_cameras: ${scene_dir}/${scene_id}/cameras/sphere.yaml
 blenderproc_cameras: ${scene_dir}/${scene_id}/cameras/blenderproc.json
 blender_cameras: ${scene_dir}/${scene_id}/cameras/blender.json
-learn_multimodalfusion: True
+# learn_multimodalfusion: False
+img2text_checkpoint_path: "/home/ado/storage/CV_final_project/image_to_text/checkpoint/checkpoint_lowest_loss.pth"
