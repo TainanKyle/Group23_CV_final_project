@@ -16,7 +16,7 @@ from models.pipeline.texture_pipeline import TexturePipeline
 
 # Setup
 if torch.cuda.is_available():
-    DEVICE = torch.device("cuda:0")
+    DEVICE = torch.device("cuda:1")
     torch.cuda.set_device(DEVICE)
 else:
     print("no gpu avaiable")
