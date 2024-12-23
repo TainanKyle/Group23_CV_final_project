@@ -24,4 +24,7 @@ data/scenes/original_dataset
 *.zip
 *.mtl
 *.obj
+*.pth
+*.jpg
+*.txt
 !data/scenes/**/*.obj
