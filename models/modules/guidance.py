@@ -79,7 +79,7 @@ class Guidance(nn.Module):
         self.unet = diffusion_model.unet.to(self.weights_dtype)
 
         # pretrained img2text model
-        self.img2text_model = TwoLayerMLP().to(self.device)
+        self.img2text_model = TwoLayerMLP(input_dim=768*2).to(self.device)
         self.img2text_model.load_state_dict(torch.load(self.config.img2text_checkpoint_path))
 
         self.img2text_model.requires_grad_(False)
@@ -182,18 +182,19 @@ class Guidance(nn.Module):
 
     def init_text_embeddings(self, batch_size):
         ### get text embedding
-        text_input = self.tokenizer(
-            [self.prompt], 
-            padding="max_length", 
-            max_length=self.tokenizer.model_max_length, 
-            truncation=True, 
-            return_tensors="pt"
-        ).input_ids.to(self.device)
+        # text_input = self.tokenizer(
+        #     [self.prompt], 
+        #     padding="max_length", 
+        #     max_length=self.tokenizer.model_max_length, 
+        #     truncation=True, 
+        #     return_tensors="pt"
+        # ).input_ids.to(self.device)
 
-        with torch.no_grad():
-            text_embeddings = self.text_encoder(text_input)[0].repeat(batch_size, 1, 1) # (B, 77, 768)
+        # with torch.no_grad():
+        #     text_embeddings = self.text_encoder(text_input)[0].repeat(batch_size, 1, 1) # (B, 77, 768)
 
-        max_length = text_input.shape[-1]
+        # max_length = text_input.shape[-1]
+        max_length = self.tokenizer.model_max_length
         uncond_input = self.tokenizer(
             [self.n_prompt], 
             padding="max_length", 
@@ -203,8 +204,8 @@ class Guidance(nn.Module):
 
         with torch.no_grad():
             uncond_embeddings = self.text_encoder(uncond_input)[0].repeat(batch_size, 1, 1) # (B, 77, 768)
-        print("cond embeddings shape:", text_embeddings.shape)
-        print("=> uncond embeddings shape:", uncond_embeddings.shape)
+        # print("cond embeddings shape:", text_embeddings.shape)
+        # print("=> uncond embeddings shape:", uncond_embeddings.shape)
         # print("=> text embeddings shape:", self.text_embeddings.shape)
 
         # use CLIP to encode image
@@ -218,10 +219,15 @@ class Guidance(nn.Module):
 
         with torch.no_grad():
             image_features = model.get_image_features(**inputs) # (1, 768)
+            a_prompt_input = processor(text=[self.config.a_prompt], return_tensors="pt", padding=True, truncation=True).to(self.device)
+            a_prompt_embedding = model.get_text_features(**a_prompt_input).to(self.device)
+        image_aprompt_features = torch.cat([image_features, a_prompt_embedding], dim=-1)
 
-        image_features = self.img2text_model(image_features)
-        self.text_embeddings = 0.5 * text_embeddings + 0.5 * image_features
-        self.text_embeddings = torch.cat([self.text_embeddings, uncond_embeddings], dim=0)
+        # image_features = self.img2text_model(image_features)
+        image_aprompt_embeddings = self.img2text_model(image_aprompt_features)
+        self.text_embeddings = torch.cat([image_aprompt_embeddings, uncond_embeddings], dim=0)
+        # self.text_embeddings = 0.5 * text_embeddings + 0.5 * image_features
+        # self.text_embeddings = torch.cat([self.text_embeddings, uncond_embeddings], dim=0)
 
         # if not self.config.learn_multimodalfusion:
         #     # combine text and image features
