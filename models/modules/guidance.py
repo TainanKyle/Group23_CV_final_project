@@ -196,8 +196,8 @@ class Guidance(nn.Module):
         # print(pre_prompt)
         pro_prompt = self.prompt.split(" ")[1]
         # print(pro_prompt)
-        revised_prompt = pre_prompt + " " + answer + " " + pro_prompt + ", " + self.config.a_prompt
-        # print(revised_prompt)
+        revised_prompt = pre_prompt + " " + answer + " style " + pro_prompt + " " + self.config.a_prompt
+        print(revised_prompt)
         ### get text embedding
         text_input = self.tokenizer(
             # [self.prompt],
