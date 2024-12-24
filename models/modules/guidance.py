@@ -14,7 +14,7 @@ import torchvision
 from PIL import Image
 from diffusers import DDIMScheduler, ControlNetModel
 
-from transformers import CLIPProcessor, CLIPModel
+from transformers import CLIPProcessor, CLIPModel, BlipProcessor, BlipForQuestionAnswering
 from .fusion import TwoLayerMLP
 
 # customized
@@ -181,9 +181,27 @@ class Guidance(nn.Module):
         self.chosen_ts = chosen_ts
 
     def init_text_embeddings(self, batch_size):
+        # Initialize BLIP model
+        model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base")
+        processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
+        image = Image.open(self.config.img_path).convert("RGB")
+        question = "What is the style of the room?"
+
+        inputs = processor(image, question, return_tensors="pt")
+        output = model.generate(**inputs)
+        answer = processor.decode(output[0], skip_special_tokens=True)
+        
+        # insert answer to the self.prompt as the second word
+        pre_prompt = self.prompt.split(" ")[0]
+        # print(pre_prompt)
+        pro_prompt = self.prompt.split(" ")[1]
+        # print(pro_prompt)
+        revised_prompt = pre_prompt + " " + answer + " " + pro_prompt + ", " + self.config.a_prompt
+        # print(revised_prompt)
         ### get text embedding
         text_input = self.tokenizer(
-            [self.prompt], 
+            # [self.prompt],
+            [revised_prompt], 
             padding="max_length", 
             max_length=self.tokenizer.model_max_length, 
             truncation=True, 
@@ -203,25 +221,28 @@ class Guidance(nn.Module):
 
         with torch.no_grad():
             uncond_embeddings = self.text_encoder(uncond_input)[0].repeat(batch_size, 1, 1) # (B, 77, 768)
-        print("cond embeddings shape:", text_embeddings.shape)
-        print("=> uncond embeddings shape:", uncond_embeddings.shape)
-        # print("=> text embeddings shape:", self.text_embeddings.shape)
+
+        self.text_embeddings = torch.cat([text_embeddings, uncond_embeddings], dim=0)
 
         # use CLIP to encode image
-        model_name = "openai/clip-vit-large-patch14"
-        model = CLIPModel.from_pretrained(model_name)
-        processor = CLIPProcessor.from_pretrained(model_name)
-        model = model.to(self.device)
-        
-        image = Image.open(self.config.img_path).convert("RGB")
-        inputs = processor(images=image, return_tensors="pt").to(self.device)
+        # model_name = "openai/clip-vit-large-patch14"
+        # model = CLIPModel.from_pretrained(model_name)
+        # processor = CLIPProcessor.from_pretrained(model_name)
+        # model = model.to(self.device)
 
-        with torch.no_grad():
-            image_features = model.get_image_features(**inputs) # (1, 768)
+        # image = Image.open(self.config.img_path).convert("RGB")
+        # inputs = processor(images=image, return_tensors="pt").to(self.device)
 
-        image_features = self.img2text_model(image_features)
-        self.text_embeddings = 0.5 * text_embeddings + 0.5 * image_features
-        self.text_embeddings = torch.cat([self.text_embeddings, uncond_embeddings], dim=0)
+        # with torch.no_grad():
+        #     image_features = model.get_image_features(**inputs) # (1, 768)
+
+        # image_features = self.img2text_model(image_features)
+        # print("=> text embeddings")
+        # print(text_embeddings.mean(), text_embeddings.std())
+        # print("=> image features")
+        # print(image_features.mean(), image_features.std())
+        # self.text_embeddings = 0.5 * text_embeddings + 0.5 * image_features
+        # self.text_embeddings = torch.cat([self.text_embeddings, uncond_embeddings], dim=0)
 
         # if not self.config.learn_multimodalfusion:
         #     # combine text and image features

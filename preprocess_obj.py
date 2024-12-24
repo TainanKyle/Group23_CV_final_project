@@ -1,6 +1,6 @@
 
 # input_file = 'data/scenes/room_tainan_1/meshes/scene.obj'
-input_file = './meshed_simplified.obj'
+input_file = "/home/ado/storage/CV_final_project/data/scenes/room_tainan_1_1_preprocessed/meshes/1_1_p2.obj"
 output_file = './scene.obj'
 
 # # flip the obj file along y axis
@@ -71,7 +71,7 @@ for line in lines:
         x, y, z = map(float, parts[1:4])
         other_data = parts[4:]  # 其余的部分
         # 重新组合保留所有信息，修改y为-y
-        new_line = f"v {x} {-y} {z} {' '.join(other_data)}\n"
+        new_line = f"v {-x} {-y} {-z} {' '.join(other_data)}\n"
         new_lines.append(new_line)
     else:
         # 直接保留其他行（例如vn等）
