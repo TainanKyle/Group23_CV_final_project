@@ -78,11 +78,11 @@ class Guidance(nn.Module):
         self.vae = diffusion_model.vae
         self.unet = diffusion_model.unet.to(self.weights_dtype)
 
-        # pretrained img2text model
-        self.img2text_model = TwoLayerMLP().to(self.device)
-        self.img2text_model.load_state_dict(torch.load(self.config.img2text_checkpoint_path))
+        # # pretrained img2text model
+        # self.img2text_model = TwoLayerMLP().to(self.device)
+        # self.img2text_model.load_state_dict(torch.load(self.config.img2text_checkpoint_path))
 
-        self.img2text_model.requires_grad_(False)
+        # self.img2text_model.requires_grad_(False)
         self.text_encoder.requires_grad_(False)
         self.vae.requires_grad_(False)
         self.unet.requires_grad_(False)
@@ -198,10 +198,11 @@ class Guidance(nn.Module):
         # print(pro_prompt)
         revised_prompt = pre_prompt + " " + answer + " style " + pro_prompt + " " + self.config.a_prompt
         print(revised_prompt)
+        self.prompt = revised_prompt
+        print(self.prompt)
         ### get text embedding
         text_input = self.tokenizer(
-            # [self.prompt],
-            [revised_prompt], 
+            [self.prompt],
             padding="max_length", 
             max_length=self.tokenizer.model_max_length, 
             truncation=True, 
