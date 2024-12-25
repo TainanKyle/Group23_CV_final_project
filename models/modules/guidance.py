@@ -223,7 +223,7 @@ class Guidance(nn.Module):
         with torch.no_grad():
             uncond_embeddings = self.text_encoder(uncond_input)[0].repeat(batch_size, 1, 1) # (B, 77, 768)
 
-        self.text_embeddings = torch.cat([text_embeddings, uncond_embeddings], dim=0)
+        self.text_embeddings = torch.cat([uncond_embeddings, text_embeddings])
 
         # use CLIP to encode image
         # model_name = "openai/clip-vit-large-patch14"
