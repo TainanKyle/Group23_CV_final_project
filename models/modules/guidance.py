@@ -225,7 +225,7 @@ class Guidance(nn.Module):
 
         # image_features = self.img2text_model(image_features)
         image_aprompt_embeddings = self.img2text_model(image_aprompt_features)
-        self.text_embeddings = torch.cat([image_aprompt_embeddings, uncond_embeddings], dim=0)
+        self.text_embeddings = torch.cat([uncond_embeddings, image_aprompt_embeddings])
         # self.text_embeddings = 0.5 * text_embeddings + 0.5 * image_features
         # self.text_embeddings = torch.cat([self.text_embeddings, uncond_embeddings], dim=0)
 
