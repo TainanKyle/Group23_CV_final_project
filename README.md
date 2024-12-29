@@ -1,18 +1,15 @@
 # Dream Your Room: Multi-Modal Texture Generation and 3D Scene Reconstruction
 
-<p align="center"><img src="docs/static/teaser/teaser.jpg" width="100%"/></p>
-
 ## Introduction
 
 We propose a system, Dream Your Room. The target is to colorize your room to the indicated style starting from a room tour video. You can feed the system with Text and Image as the style description to specify the style of the room.
 
 We summarize our contributions as follows:
-1. We successfully adapted Scentex to handle multimodal inputs, allowing it to process both text and image data.
+1. We successfully adapted Scentex to handle multimodal inputs, allowing it to process both text and image data. One noteworthy point of our method is the proposed SEE module, which enables the texture generator to "see" the image.
 2. Our method demonstrated it is general to real-world scenarios.
 
-<img width="787" alt="image" src="https://github.com/user-attachments/assets/dbd54635-f211-4a2d-bab9-7d0ca7919f0e" />
 
-For further information of this project, please also check out: 
+For further information of this project, please also check out our 
 [slides](https://docs.google.com/presentation/d/14A82o6Mwug3DDvPUK2WIOwWNPNpti8ZJ6PWi2dua5Jc/edit?usp=sharing)
 [video](https://youtu.be/d7lcYxTi6v4)
 
